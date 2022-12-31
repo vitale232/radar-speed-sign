@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import inspect
 from multiprocessing import Process, Value
 import os
@@ -8,6 +9,7 @@ import time
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from rgbmatrix import graphics
 import serial
+
 
 # OPS_UNITS_PREF = "UC"  # cm/s for debugging
 # OPS_DIRECTION_PREF = "R+"  # In only
@@ -164,6 +166,11 @@ def main(config):
     ser.flush()
 
     try:
+        # Shared mem is allocated and passed to the process where the RGB LED
+        # matrix will be initialized and painted.
+        # The main process will read the serial OPS data, and update the shared mem
+        # The "i" means signed Int
+        # More opts: https://docs.python.org/3/library/array.html#module-array
         shared_velocity = Value("i", 0)
         p = Process(
             target=paint_matrix,
