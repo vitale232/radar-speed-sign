@@ -64,13 +64,11 @@ def paint_matrix(config, value):
     animation_font.LoadFont(os.path.join(fonts_dir, "HighwayGothic16.bdf"))
 
     RED = (255, 0, 0)
-
-    # Initialize the USB port to read from the OPS-241A module
     speed = 0
     while True:
         matrix.Clear()
 
-        speed = round(value.value)
+        speed = value.value
         if speed > config.emote_threshold:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED)
@@ -164,13 +162,14 @@ def main(config):
     send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_units_pref)
     send_serial_cmd(ser, "Set Direction Pref:", config.ops_direction_pref)
     ser.flush()
+
     try:
-        value = Value("d", 0)
+        shared_velocity = Value("i", 0)
         p = Process(
             target=paint_matrix,
             args=(
                 config,
-                value,
+                shared_velocity,
             ),
         )
         p.start()
@@ -178,7 +177,7 @@ def main(config):
         while True:
             velocity = read_velocity(ser)
             print(f"{velocity=}")
-            value.value = velocity
+            shared_velocity.value = velocity
     except KeyboardInterrupt:
         print("Cleaning up...")
         if not ser.closed:
