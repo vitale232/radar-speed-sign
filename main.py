@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import inspect
-import multiprocessing as mp
+from multiprocessing import Process, Value
 import os
 import sys
 import time
@@ -9,21 +9,38 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from rgbmatrix import graphics
 import serial
 
-# OPS_UNITS_PREF = "UC" # cm/s for debugging
-# OPS_DIRECTION_PREF = "R+"  # In only
-# EMOTE_THRESHOLD = 133
-# SLOW_DOWN_THRESHOLD = 126
-# MIN_DISPLAYABLE_SPEED = 8
-
-
-OPS_UNITS_PREF = "US"  # mph for Americans
+OPS_UNITS_PREF = "UC"  # cm/s for debugging
 OPS_DIRECTION_PREF = "R+"  # In only
-EMOTE_THRESHOLD = 34
-SLOW_DOWN_THRESHOLD = 29
+EMOTE_THRESHOLD = 133
+SLOW_DOWN_THRESHOLD = 126
 MIN_DISPLAYABLE_SPEED = 8
 
 
-def paint_matrix(value):
+# OPS_UNITS_PREF = "US"  # mph for Americans
+# OPS_DIRECTION_PREF = "R+"  # In only
+# # exclusive thresholds, using `>`
+# EMOTE_THRESHOLD = 34
+# SLOW_DOWN_THRESHOLD = 28
+# MIN_DISPLAYABLE_SPEED = -1
+
+
+class Config:
+    def __init__(
+        self,
+        ops_units_pref,
+        ops_direction_pref,
+        emote_threshold,
+        slow_down_threshold,
+        min_displayable_speed,
+    ) -> None:
+        self.ops_units_pref = ops_units_pref
+        self.ops_direction_pref = ops_direction_pref
+        self.emote_threshold = emote_threshold
+        self.slow_down_threshold = slow_down_threshold
+        self.min_displayable_speed = min_displayable_speed
+
+
+def paint_matrix(config, value):
     options = RGBMatrixOptions()
     options.rows = 32
     options.cols = 64
@@ -54,21 +71,22 @@ def paint_matrix(value):
     speed = 0
     while True:
         matrix.Clear()
+
         # speed = conn.recv()
         speed = round(value.value)
-        if speed > EMOTE_THRESHOLD:
+        if speed > config.emote_threshold:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED)
             matrix.Clear()
-            emote(matrix, canvas, animation_font, RED, 1)
+            emote("HOLY", "SHIT!", matrix, canvas, animation_font, RED, 1)
             matrix.Clear()
-            show_slow_down(matrix, canvas, animation_font, RED, 1)
-        elif speed > SLOW_DOWN_THRESHOLD:
+            emote("SLOW", "DOWN", matrix, canvas, animation_font, RED, 1)
+        elif speed > config.slow_down_threshold:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED)
             matrix.Clear()
-            show_slow_down(matrix, canvas, animation_font, RED, 2)
-        elif speed > MIN_DISPLAYABLE_SPEED:
+            emote("SLOW", "DOWN", matrix, canvas, animation_font, RED, 2)
+        elif speed > config.min_displayable_speed:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED)
         else:
@@ -83,44 +101,11 @@ def show_speed(speed, matrix, canvas, font, color, timeout=0.25):
     return
 
 
-def say_hi(matrix, canvas, font, color, timeout=0.5):
-    graphics.DrawText(canvas, font, 0, 30, graphics.Color(*color), "FeelBetter!")
-    canvas = matrix.SwapOnVSync(canvas)
-    time.sleep(timeout)
-    return
-
-
-def show_slow_down(matrix, canvas, font, color, iterations=2):
+def emote(line1, line2, matrix, canvas, font, color, iterations=2):
     n = 0
     while n < iterations:
-        graphics.DrawText(canvas, font, 8, 15, graphics.Color(*color), "SLOW")
-        graphics.DrawText(canvas, font, 8, 30, graphics.Color(*color), "DOWN")
-        canvas = matrix.SwapOnVSync(canvas)
-        time.sleep(0.75)
-        matrix.Clear()
-        time.sleep(0.25)
-        n += 1
-    return
-
-
-def emote(matrix, canvas, font, color, iterations=2):
-    n = 0
-    while n < iterations:
-        graphics.DrawText(canvas, font, 8, 15, graphics.Color(*color), "FUCK")
-        graphics.DrawText(canvas, font, 8, 30, graphics.Color(*color), "YOU!!")
-        canvas = matrix.SwapOnVSync(canvas)
-        time.sleep(0.75)
-        matrix.Clear()
-        time.sleep(0.25)
-        n += 1
-    return
-
-
-def say_two_lines(line1, line2, matrix, canvas, font, color, iterations=2):
-    n = 0
-    while n < iterations:
-        graphics.DrawText(canvas, font, 0, 15, graphics.Color(*color), line1)
-        graphics.DrawText(canvas, font, 0, 30, graphics.Color(*color), line2)
+        graphics.DrawText(canvas, font, 8, 15, graphics.Color(*color), line1)
+        graphics.DrawText(canvas, font, 8, 30, graphics.Color(*color), line2)
         canvas = matrix.SwapOnVSync(canvas)
         time.sleep(0.75)
         matrix.Clear()
@@ -168,7 +153,7 @@ def read_velocity(serial_port):
         return 0
 
 
-if __name__ == "__main__":
+def main(config):
     print("\nInitializing OPS243 Module")
     ser = serial.Serial(
         port="/dev/ttyACM0",
@@ -179,13 +164,19 @@ if __name__ == "__main__":
         timeout=0.5,
         write_timeout=2,
     )
-    send_serial_cmd(ser, "Set Speed Output Units: ", OPS_UNITS_PREF)
-    send_serial_cmd(ser, "Set Direction Pref:", OPS_DIRECTION_PREF)
+    send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_direction_pref)
+    send_serial_cmd(ser, "Set Direction Pref:", config.ops_direction_pref)
     ser.flush()
     try:
         # parent_conn, child_conn = mp.Pipe()
-        value = mp.Value("d", 0)
-        p = mp.Process(target=paint_matrix, args=(value,))
+        value = Value("d", 0)
+        p = Process(
+            target=paint_matrix,
+            args=(
+                config,
+                value,
+            ),
+        )
         p.start()
 
         while True:
@@ -198,3 +189,14 @@ if __name__ == "__main__":
         if not ser.closed:
             ser.close()
             sys.exit()
+
+
+if __name__ == "__main__":
+    config = Config(
+        OPS_UNITS_PREF,
+        OPS_DIRECTION_PREF,
+        EMOTE_THRESHOLD,
+        SLOW_DOWN_THRESHOLD,
+        MIN_DISPLAYABLE_SPEED,
+    )
+    main(config)
