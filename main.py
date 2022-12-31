@@ -9,11 +9,17 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from rgbmatrix import graphics
 import serial
 
-OPS_UNITS_PREF = "UC"
-OPS_DIRECTION_PREF = "R+"  # In only
+# OPS_UNITS_PREF = "UC" # cm/s for debugging
+# OPS_DIRECTION_PREF = "R+"  # In only
+# EMOTE_THRESHOLD = 133
+# SLOW_DOWN_THRESHOLD = 126
+# MIN_DISPLAYABLE_SPEED = 8
 
-EMOTE_THRESHOLD = 133
-SLOW_DOWN_THRESHOLD = 126
+
+OPS_UNITS_PREF = "US" # mph for Americans
+OPS_DIRECTION_PREF = "R+"  # In only
+EMOTE_THRESHOLD = 34
+SLOW_DOWN_THRESHOLD = 29
 MIN_DISPLAYABLE_SPEED = 8
 
 
