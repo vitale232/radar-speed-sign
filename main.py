@@ -16,7 +16,7 @@ import serial
 # MIN_DISPLAYABLE_SPEED = 8
 
 
-OPS_UNITS_PREF = "US" # mph for Americans
+OPS_UNITS_PREF = "US"  # mph for Americans
 OPS_DIRECTION_PREF = "R+"  # In only
 EMOTE_THRESHOLD = 34
 SLOW_DOWN_THRESHOLD = 29
