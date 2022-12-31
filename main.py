@@ -9,19 +9,19 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from rgbmatrix import graphics
 import serial
 
-OPS_UNITS_PREF = "UC"  # cm/s for debugging
-OPS_DIRECTION_PREF = "R+"  # In only
-EMOTE_THRESHOLD = 133
-SLOW_DOWN_THRESHOLD = 126
-MIN_DISPLAYABLE_SPEED = 8
-
-
-# OPS_UNITS_PREF = "US"  # mph for Americans
+# OPS_UNITS_PREF = "UC"  # cm/s for debugging
 # OPS_DIRECTION_PREF = "R+"  # In only
-# # exclusive thresholds, using `>`
-# EMOTE_THRESHOLD = 34
-# SLOW_DOWN_THRESHOLD = 28
-# MIN_DISPLAYABLE_SPEED = -1
+# EMOTE_THRESHOLD = 133
+# SLOW_DOWN_THRESHOLD = 126
+# MIN_DISPLAYABLE_SPEED = 8
+
+
+OPS_UNITS_PREF = "US"  # mph for Americans
+OPS_DIRECTION_PREF = "R+"  # In only
+# exclusive thresholds, using `>`
+EMOTE_THRESHOLD = 34
+SLOW_DOWN_THRESHOLD = 28
+MIN_DISPLAYABLE_SPEED = -1
 
 
 class Config:
@@ -64,15 +64,12 @@ def paint_matrix(config, value):
     animation_font.LoadFont(os.path.join(fonts_dir, "HighwayGothic16.bdf"))
 
     RED = (255, 0, 0)
-    # if USE_SCREEN:
-    #     say_two_lines("Hello", "World", matrix, canvas, animation_font, RED, 5)
 
     # Initialize the USB port to read from the OPS-241A module
     speed = 0
     while True:
         matrix.Clear()
 
-        # speed = conn.recv()
         speed = round(value.value)
         if speed > config.emote_threshold:
             print(f"{speed=}")
@@ -164,11 +161,10 @@ def main(config):
         timeout=0.5,
         write_timeout=2,
     )
-    send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_direction_pref)
+    send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_units_pref)
     send_serial_cmd(ser, "Set Direction Pref:", config.ops_direction_pref)
     ser.flush()
     try:
-        # parent_conn, child_conn = mp.Pipe()
         value = Value("d", 0)
         p = Process(
             target=paint_matrix,
@@ -183,7 +179,6 @@ def main(config):
             velocity = read_velocity(ser)
             print(f"{velocity=}")
             value.value = velocity
-            # parent_conn.send(v)
     except KeyboardInterrupt:
         print("Cleaning up...")
         if not ser.closed:
