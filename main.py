@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from datetime import datetime
 import inspect
 from multiprocessing import Process, Value
 import os
@@ -21,9 +22,9 @@ import serial
 OPS_UNITS_PREF = "US"  # mph for Americans
 OPS_DIRECTION_PREF = "R+"  # In only
 # exclusive thresholds, using `>`
-EMOTE_THRESHOLD = 34
+EMOTE_THRESHOLD = 35
 SLOW_DOWN_THRESHOLD = 28
-MIN_DISPLAYABLE_SPEED = -1
+MIN_DISPLAYABLE_SPEED = 14
 
 
 class Config:
@@ -42,13 +43,14 @@ class Config:
         self.min_displayable_speed = min_displayable_speed
 
 
-def paint_matrix(config, value):
+def paint_matrix(config, speed_value):
     options = RGBMatrixOptions()
     options.rows = 32
     options.cols = 64
     options.chain_length = 1
     options.parallel = 1
     options.hardware_mapping = "adafruit-hat"
+    # RPi 4
     options.gpio_slowdown = 4
 
     matrix = RGBMatrix(options=options)
@@ -70,7 +72,7 @@ def paint_matrix(config, value):
     while True:
         matrix.Clear()
 
-        speed = value.value
+        speed = speed_value.value
         if speed > config.emote_threshold:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED)
@@ -88,7 +90,7 @@ def paint_matrix(config, value):
             show_speed(speed, matrix, canvas, digits_font, RED)
         else:
             # print(f'No display {speed = }')
-            matrix.Clear()
+            pass
 
 
 def show_speed(speed, matrix, canvas, font, color, timeout=0.25):
@@ -145,13 +147,13 @@ def read_velocity(serial_port):
                 print(f"Could not parse the number from the following string:: {rxstr}")
                 speed_available = False
     if speed_available == True:
-        return round(rxfloat)
+        return rxfloat
     else:
-        return 0
+        return 0.0
 
 
 def main(config):
-    print("\nInitializing OPS243 Module")
+    print(f"\nInitializing OPS243 Module at {datetime.now()}")
     ser = serial.Serial(
         port="/dev/ttyACM0",
         baudrate=115200,
@@ -161,14 +163,16 @@ def main(config):
         timeout=0.5,
         write_timeout=2,
     )
-    send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_units_pref)
+    # send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_units_pref)
     send_serial_cmd(ser, "Set Direction Pref:", config.ops_direction_pref)
     ser.flush()
 
     try:
+        # Inspired by hzeller's comments here: https://github.com/hzeller/rpi-rgb-led-matrix/issues/695
+        # Create a new process where the RGB Matrix can live and paint rapidly, without
+        # affecting the main process's ability to read the serial data.
         # Shared mem is allocated and passed to the process where the RGB LED
-        # matrix will be initialized and painted.
-        # The main process will read the serial OPS data, and update the shared mem
+        # matrix is nitialized and painted.
         # The "i" means signed Int
         # More opts: https://docs.python.org/3/library/array.html#module-array
         shared_velocity = Value("i", 0)
@@ -181,10 +185,20 @@ def main(config):
         )
         p.start()
 
-        while True:
-            velocity = read_velocity(ser)
-            print(f"{velocity=}")
-            shared_velocity.value = velocity
+        output_csv_path = os.path.join(
+            os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0))),
+            "speeds.csv",
+        )
+        with open(output_csv_path, "a") as output_file:
+            while True:
+                velocity = read_velocity(ser)
+                velocity_mph = round(velocity * 2.24)
+                shared_velocity.value = velocity_mph
+                if velocity > config.min_displayable_speed:
+                    datum = f"{datetime.now()}, {velocity_mph}\n"
+                    print(f"{datum=}")
+                    output_file.write(datum)
+                    output_file.flush()
     except KeyboardInterrupt:
         print("Cleaning up...")
         if not ser.closed:
