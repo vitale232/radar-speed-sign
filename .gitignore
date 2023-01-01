@@ -1,5 +1,6 @@
 # Output data
 speeds.csv
+log
 
 __pycache__/
 *.py[cod]
