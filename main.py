@@ -19,7 +19,6 @@ import serial
 # MIN_DISPLAYABLE_SPEED = 8
 
 
-OPS_UNITS_PREF = "US"  # mph for Americans
 OPS_DIRECTION_PREF = "R+"  # In only
 # exclusive thresholds, using `>`
 EMOTE_THRESHOLD = 35
@@ -30,13 +29,11 @@ MIN_DISPLAYABLE_SPEED = 14
 class Config:
     def __init__(
         self,
-        ops_units_pref,
         ops_direction_pref,
         emote_threshold,
         slow_down_threshold,
         min_displayable_speed,
     ) -> None:
-        self.ops_units_pref = ops_units_pref
         self.ops_direction_pref = ops_direction_pref
         self.emote_threshold = emote_threshold
         self.slow_down_threshold = slow_down_threshold
@@ -160,8 +157,7 @@ def main(config):
         parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
         bytesize=serial.EIGHTBITS,
-        timeout=0.5,
-        write_timeout=2,
+        timeout=0.50,
     )
     # send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_units_pref)
     send_serial_cmd(ser, "Set Direction Pref:", config.ops_direction_pref)
@@ -208,7 +204,6 @@ def main(config):
 
 if __name__ == "__main__":
     config = Config(
-        OPS_UNITS_PREF,
         OPS_DIRECTION_PREF,
         EMOTE_THRESHOLD,
         SLOW_DOWN_THRESHOLD,
