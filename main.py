@@ -151,9 +151,10 @@ def read_velocity(serial_port):
 
 def main(config):
     print(f"\nInitializing OPS243 Module at {datetime.now()}")
+    # OPS 243 API Doc: https://omnipresense.com/wp-content/uploads/2021/09/AN-010-X_API_Interface.pdf
     ser = serial.Serial(
         port="/dev/ttyACM0",
-        baudrate=115200,
+        baudrate=19_200,
         parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
         bytesize=serial.EIGHTBITS,
@@ -188,7 +189,7 @@ def main(config):
         with open(output_csv_path, "a") as output_file:
             while True:
                 velocity = read_velocity(ser)
-                velocity_mph = round(velocity * 2.24)
+                velocity_mph = round(velocity * 2.23694)
                 shared_velocity.value = velocity_mph
                 if velocity > config.min_displayable_speed:
                     datum = f"{datetime.now()}, {velocity_mph}\n"
