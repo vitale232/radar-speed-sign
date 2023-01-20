@@ -22,7 +22,8 @@ import serial
 OPS_DIRECTION_PREF = "R+"  # In only
 # exclusive thresholds, using `>`
 EMOTE_THRESHOLD = 35
-SLOW_DOWN_THRESHOLD = 28
+SLOW_DOWN_THRESHOLD = 30
+BLINK_THRESHOLD = 28
 MIN_DISPLAYABLE_SPEED = 14
 
 
@@ -32,11 +33,13 @@ class Config:
         ops_direction_pref,
         emote_threshold,
         slow_down_threshold,
+        blink_threshold,
         min_displayable_speed,
     ) -> None:
         self.ops_direction_pref = ops_direction_pref
         self.emote_threshold = emote_threshold
         self.slow_down_threshold = slow_down_threshold
+        self.blink_threshold = blink_threshold
         self.min_displayable_speed = min_displayable_speed
 
 
@@ -72,7 +75,7 @@ def paint_matrix(config, speed_value):
         speed = speed_value.value
         if speed > config.emote_threshold:
             print(f"{speed=}")
-            show_speed(speed, matrix, canvas, digits_font, RED)
+            show_speed(speed, matrix, canvas, digits_font, RED, 0.5)
             matrix.Clear()
             emote("HOLY", "SHIT!", matrix, canvas, animation_font, RED, 1)
             matrix.Clear()
@@ -82,11 +85,20 @@ def paint_matrix(config, speed_value):
             show_speed(speed, matrix, canvas, digits_font, RED)
             matrix.Clear()
             emote("SLOW", "DOWN", matrix, canvas, animation_font, RED, 2)
+        elif speed > config.blink_threshold:
+            show_speed(speed, matrix, canvas, digits_font, RED)
+            matrix.Clear()
+            time.sleep(0.25)
+            show_speed(speed, matrix, canvas, digits_font, RED)
         elif speed > config.min_displayable_speed:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED)
         else:
-            # print(f'No display {speed = }')
+            if speed > 5:
+                print(f'No display {speed = }')
+            # else:
+            #     print(f"{speed=}")
+            #     show_speed(speed, matrix, canvas, digits_font, RED)
             pass
 
 
@@ -94,7 +106,7 @@ def show_speed(speed, matrix, canvas, font, color, timeout=0.25):
     graphics.DrawText(canvas, font, 0, 30, graphics.Color(*color), f"{speed: 2}")
     canvas = matrix.SwapOnVSync(canvas)
     time.sleep(timeout)
-    return
+    return canvas
 
 
 def emote(line1, line2, matrix, canvas, font, color, iterations=2):
@@ -107,7 +119,7 @@ def emote(line1, line2, matrix, canvas, font, color, iterations=2):
         matrix.Clear()
         time.sleep(0.25)
         n += 1
-    return
+    return canvas
 
 
 def send_serial_cmd(serial_port, print_prefix, command):
@@ -169,7 +181,7 @@ def main(config):
         # Create a new process where the RGB Matrix can live and paint rapidly, without
         # affecting the main process's ability to read the serial data.
         # Shared mem is allocated and passed to the process where the RGB LED
-        # matrix is nitialized and painted.
+        # matrix is initialized and painted.
         # The "i" means signed Int
         # More opts: https://docs.python.org/3/library/array.html#module-array
         shared_velocity = Value("i", 0)
@@ -196,6 +208,7 @@ def main(config):
                     print(f"{datum=}")
                     output_file.write(datum)
                     output_file.flush()
+
     except KeyboardInterrupt:
         print("Cleaning up...")
         if not ser.closed:
@@ -208,6 +221,7 @@ if __name__ == "__main__":
         OPS_DIRECTION_PREF,
         EMOTE_THRESHOLD,
         SLOW_DOWN_THRESHOLD,
+        BLINK_THRESHOLD,
         MIN_DISPLAYABLE_SPEED,
     )
     main(config)
