@@ -21,10 +21,11 @@ import serial
 
 OPS_DIRECTION_PREF = "R+"  # In only
 # exclusive thresholds, using `>`
-EMOTE_THRESHOLD = 35
+EMOTE_THRESHOLD = 36
 SLOW_DOWN_THRESHOLD = 30
 BLINK_THRESHOLD = 28
 MIN_DISPLAYABLE_SPEED = 14
+MIN_LOG_SPEED = 14
 
 
 class Config:
@@ -35,12 +36,14 @@ class Config:
         slow_down_threshold,
         blink_threshold,
         min_displayable_speed,
+        min_log_speed
     ) -> None:
         self.ops_direction_pref = ops_direction_pref
         self.emote_threshold = emote_threshold
         self.slow_down_threshold = slow_down_threshold
         self.blink_threshold = blink_threshold
         self.min_displayable_speed = min_displayable_speed
+        self.min_log_speed = min_log_speed
 
 
 def paint_matrix(config, speed_value):
@@ -69,6 +72,10 @@ def paint_matrix(config, speed_value):
 
     RED = (255, 0, 0)
     speed = 0
+    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 1)
+    time.sleep(0.2)
+    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 1)
+
     while True:
         matrix.Clear()
 
@@ -82,7 +89,7 @@ def paint_matrix(config, speed_value):
             emote("SLOW", "DOWN", matrix, canvas, animation_font, RED, 1)
         elif speed > config.slow_down_threshold:
             print(f"{speed=}")
-            show_speed(speed, matrix, canvas, digits_font, RED)
+            show_speed(speed, matrix, canvas, digits_font, RED, 0.5)
             matrix.Clear()
             emote("SLOW", "DOWN", matrix, canvas, animation_font, RED, 2)
         elif speed > config.blink_threshold:
@@ -162,8 +169,8 @@ def read_velocity(serial_port):
 
 
 def main(config):
-    print(f"\nInitializing OPS243 Module at {datetime.now()}")
-    # OPS 243 API Doc: https://omnipresense.com/wp-content/uploads/2021/09/AN-010-X_API_Interface.pdf
+    print(f"\nInitializing OPS241 Module at {datetime.now()}")
+    # OPS 241 API Doc: https://omnipresense.com/wp-content/uploads/2021/09/AN-010-X_API_Interface.pdf
     ser = serial.Serial(
         port="/dev/ttyACM0",
         baudrate=19_200,
@@ -199,11 +206,12 @@ def main(config):
             "speeds.csv",
         )
         with open(output_csv_path, "a") as output_file:
+            print(f"Commence monitoring at {datetime.now()}")
             while True:
                 velocity = read_velocity(ser)
                 velocity_mph = round(velocity * 2.23694)
                 shared_velocity.value = velocity_mph
-                if velocity > config.min_displayable_speed:
+                if velocity > config.min_log_speed:
                     datum = f"{datetime.now()}, {velocity_mph}\n"
                     print(f"{datum=}")
                     output_file.write(datum)
@@ -223,5 +231,6 @@ if __name__ == "__main__":
         SLOW_DOWN_THRESHOLD,
         BLINK_THRESHOLD,
         MIN_DISPLAYABLE_SPEED,
+        MIN_LOG_SPEED
     )
     main(config)
