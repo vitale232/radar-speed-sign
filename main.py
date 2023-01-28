@@ -24,7 +24,7 @@ OPS_DIRECTION_PREF = "R+"  # In only
 EMOTE_THRESHOLD = 36
 SLOW_DOWN_THRESHOLD = 30
 BLINK_THRESHOLD = 28
-MIN_DISPLAYABLE_SPEED = 14
+MIN_DISPLAYABLE_SPEED = 1
 MIN_LOG_SPEED = 14
 
 
@@ -72,9 +72,13 @@ def paint_matrix(config, speed_value):
 
     RED = (255, 0, 0)
     speed = 0
-    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 1)
+
+    # Say hello, world
+    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 10)
     time.sleep(0.2)
-    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 1)
+    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 10)
+    time.sleep(0.2)
+    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 10)
 
     while True:
         matrix.Clear()
