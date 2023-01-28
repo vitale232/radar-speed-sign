@@ -74,11 +74,7 @@ def paint_matrix(config, speed_value):
     speed = 0
 
     # Say hello, world
-    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 10)
-    time.sleep(0.2)
-    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 10)
-    time.sleep(0.2)
-    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 10)
+    canvas = emote("Sys.", "Ready", matrix, canvas, animation_font, RED, 7)
 
     while True:
         matrix.Clear()
