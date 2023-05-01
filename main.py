@@ -7,6 +7,7 @@ import os
 import sys
 import time
 
+import cv2
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from rgbmatrix import graphics
 import serial
@@ -26,6 +27,7 @@ SLOW_DOWN_THRESHOLD = 30
 BLINK_THRESHOLD = 28
 MIN_DISPLAYABLE_SPEED = 1
 MIN_LOG_SPEED = 14
+MIN_VIDEO_SPEED = 14
 
 
 class Config:
@@ -36,7 +38,8 @@ class Config:
         slow_down_threshold,
         blink_threshold,
         min_displayable_speed,
-        min_log_speed
+        min_log_speed,
+        min_video_speed,
     ) -> None:
         self.ops_direction_pref = ops_direction_pref
         self.emote_threshold = emote_threshold
@@ -44,6 +47,7 @@ class Config:
         self.blink_threshold = blink_threshold
         self.min_displayable_speed = min_displayable_speed
         self.min_log_speed = min_log_speed
+        self.min_video_speed = min_video_speed
 
 
 def paint_matrix(config, speed_value):
@@ -102,7 +106,7 @@ def paint_matrix(config, speed_value):
             show_speed(speed, matrix, canvas, digits_font, RED)
         else:
             if speed > 5:
-                print(f'No display {speed = }')
+                print(f"No display {speed = }")
             # else:
             #     print(f"{speed=}")
             #     show_speed(speed, matrix, canvas, digits_font, RED)
@@ -168,6 +172,81 @@ def read_velocity(serial_port):
         return 0.0
 
 
+def capture_video(
+    is_recording,
+    speed,
+    current_datetime,
+    duration=10,
+    datetime_format="%Y-%m-%d_%H:%M:%S",
+):
+    # Initialize video capture
+    cap = cv2.VideoCapture(0)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*"XVID")
+    formatted_datetime = current_datetime.strftime(datetime_format)
+    out = cv2.VideoWriter(f"vid_{formatted_datetime}.avi", fourcc, fps, (width, height))
+
+    start_time = time.time()
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if ret:
+            # Add metadata
+            frame_with_metadata = overlay_metadata(
+                frame, f"{speed.value} mph | {datetime.now().strftime(datetime_format)}"
+            )
+
+            # Display the resulting frame
+
+            # Save the frame to disk
+            out.write(frame_with_metadata)
+
+            # Exit if 'q' key is pressed
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+            if time.time() > start_time + duration:
+                break
+        else:
+            break
+
+    # Release resources and close windows
+    cap.release()
+    out.release()
+    is_recording.value = False
+    return
+
+
+def overlay_metadata(frame, metadata):
+    height, width, _ = frame.shape
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.8
+    font_thickness = 2
+    text_color = (255, 255, 255)  # White
+    rectangle_height = int(height * 0.1)
+
+    # Draw a black rectangle at the top of the frame
+    cv2.rectangle(frame, (0, 0), (width, rectangle_height), (0, 0, 0), -1)
+
+    # Overlay the metadata
+    y_offset = int(rectangle_height * 0.5)
+    x_offset = 10
+    cv2.putText(
+        frame,
+        metadata,
+        (x_offset, y_offset),
+        font,
+        font_scale,
+        text_color,
+        font_thickness,
+        cv2.LINE_AA,
+    )
+    return frame
+
+
 def main(config):
     print(f"\nInitializing OPS241 Module at {datetime.now()}")
     # OPS 241 API Doc: https://omnipresense.com/wp-content/uploads/2021/09/AN-010-X_API_Interface.pdf
@@ -192,6 +271,7 @@ def main(config):
         # The "i" means signed Int
         # More opts: https://docs.python.org/3/library/array.html#module-array
         shared_velocity = Value("i", 0)
+        is_saving_video = Value("B", False)
         p = Process(
             target=paint_matrix,
             args=(
@@ -211,11 +291,23 @@ def main(config):
                 velocity = read_velocity(ser)
                 velocity_mph = round(velocity * 2.23694)
                 shared_velocity.value = velocity_mph
+                observed_at = datetime.now()
                 if velocity > config.min_log_speed:
-                    datum = f"{datetime.now()}, {velocity_mph}\n"
+                    datum = f"{observed_at}, {velocity_mph}\n"
                     print(f"{datum=}")
                     output_file.write(datum)
                     output_file.flush()
+                if velocity > config.min_video_speed:
+                    print(f"value: {is_saving_video.value}")
+                    if is_saving_video.value == 0:
+                        is_saving_video.value = 1
+                        video_process = Process(
+                            target=capture_video,
+                            args=(is_saving_video, shared_velocity, observed_at),
+                        )
+                        video_process.start()
+                    else:
+                        print("Skip save")
 
     except KeyboardInterrupt:
         print("Cleaning up...")
@@ -231,6 +323,7 @@ if __name__ == "__main__":
         SLOW_DOWN_THRESHOLD,
         BLINK_THRESHOLD,
         MIN_DISPLAYABLE_SPEED,
-        MIN_LOG_SPEED
+        MIN_LOG_SPEED,
+        MIN_VIDEO_SPEED,
     )
     main(config)
