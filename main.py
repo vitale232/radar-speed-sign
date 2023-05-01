@@ -13,7 +13,6 @@ from rgbmatrix import graphics
 import serial
 
 
-
 OPS_DIRECTION_PREF = "R+"  # Means data in only
 # exclusive thresholds, using greater than logic
 EMOTE_THRESHOLD = 36
