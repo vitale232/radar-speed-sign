@@ -13,15 +13,9 @@ from rgbmatrix import graphics
 import serial
 
 
-# OPS_UNITS_PREF = "UC"  # cm/s for debugging
-# OPS_DIRECTION_PREF = "R+"  # In only
-# EMOTE_THRESHOLD = 133
-# SLOW_DOWN_THRESHOLD = 126
-# MIN_DISPLAYABLE_SPEED = 8
 
-
-OPS_DIRECTION_PREF = "R+"  # In only
-# exclusive thresholds, using `>`
+OPS_DIRECTION_PREF = "R+"  # Means data in only
+# exclusive thresholds, using greater than logic
 EMOTE_THRESHOLD = 36
 SLOW_DOWN_THRESHOLD = 30
 BLINK_THRESHOLD = 28
@@ -272,14 +266,14 @@ def main(config):
         # More opts: https://docs.python.org/3/library/array.html#module-array
         shared_velocity = Value("i", 0)
         is_saving_video = Value("B", False)
-        p = Process(
+        matrix_process = Process(
             target=paint_matrix,
             args=(
                 config,
                 shared_velocity,
             ),
         )
-        p.start()
+        matrix_process.start()
 
         output_csv_path = os.path.join(
             os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0))),
