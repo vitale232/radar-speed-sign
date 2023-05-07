@@ -51,6 +51,12 @@ class Config:
 
 
 def paint_matrix(config, speed_value):
+    """
+    This function should be run within its own `multiprocessing.Process`.
+    The`config` can be a ref to the main config, but the `speed_value`
+    should be a `multiprocessing.Value` that is set in a different
+    python `Process`.
+    """
     options = RGBMatrixOptions()
     options.rows = 32
     options.cols = 64
@@ -180,6 +186,14 @@ def capture_video(
     datetime_format="%Y-%m-%d_%H:%M:%S",
     url=API_URL,
 ):
+    """
+    This function should run in its own `multiprocessing.Process`. It will
+    save an approx. 5s video to disk, attempt to upload it to aws lambda/s3, and
+    if successful, is removed from disk.
+
+    The file should be available on disk if the HTTP POST fails. If it succeeds,
+    the API_KEY holder will be able to provide you a link to a video.
+    """
     is_recording.value = True
     print(f"capturing video {current_datetime}")
     # Initialize video capture
@@ -222,7 +236,7 @@ def capture_video(
     # Save the video to our AWS Lambda endpoint
     headers = {"Content-Type": "video/mp4", "X-API-KEY": X_API_KEY}
     request_url = f"{url}?fileName={file_name}"
-    print(f"POST to {url}")
+    print(f"POST to {request_url}")
 
     with open(file_name, "rb") as file:
         base64_data = base64.b64encode(file.read()).decode("utf-8")
@@ -235,6 +249,9 @@ def capture_video(
 
 
 def overlay_metadata(frame, metadata):
+    """
+    Overlay a black rectangle with the `metadata` as text on the top of the `frame`.
+    """
     height, width, _ = frame.shape
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.8
@@ -322,6 +339,7 @@ def main(config):
                         video_process.start()
                     else:
                         print("Skip save")
+                # if velocity_mph > MIN_DISPLAYABLE_SPEED is handled within the paint_matrix proc
 
     except KeyboardInterrupt:
         print("Cleaning up...")
