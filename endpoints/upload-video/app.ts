@@ -16,7 +16,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     console.log(`Starting at: ${new Date()}`);
     try {
         console.log({ event });
-        const contentType = event.headers?.['Content-Type'];
+        const contentType = event.headers?.['Content-Type'] ?? 'vido/mp4';
         console.log({ contentType });
         const videoBase64 = event.body as string;
         if (!videoBase64) {
@@ -33,7 +33,8 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             Bucket: 'radar-speed-sign',
             Key: fileName,
             Body: Buffer.from(videoBase64, 'base64'),
-            ContentType: contentType ?? 'vido/mp4',
+            ContentType: contentType,
+            Metadata: { contentType },
         });
         console.log({ command });
         await client.send(command);
