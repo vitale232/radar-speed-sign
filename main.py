@@ -13,7 +13,8 @@ from dotenv import load_dotenv
 import requests
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from rgbmatrix import graphics
-import serial
+from serial import PARITY_NONE, STOPBITS_ONE, EIGHTBITS, Serial
+
 
 load_dotenv()
 X_API_KEY = os.environ["X_API_KEY"]
@@ -24,9 +25,9 @@ OPS_DIRECTION_PREF = "R+"  # Means data in only
 EMOTE_THRESHOLD = 36
 SLOW_DOWN_THRESHOLD = 30
 BLINK_THRESHOLD = 28
-MIN_DISPLAYABLE_SPEED = 1
-MIN_LOG_SPEED = 1
-MIN_VIDEO_SPEED = 1
+MIN_DISPLAYABLE_SPEED = 14
+MIN_LOG_SPEED = 14
+MIN_VIDEO_SPEED = 14
 
 
 class Config:
@@ -218,6 +219,7 @@ def capture_video(
     out.release()
     is_recording.value = False
 
+    # Save the video to our AWS Lambda endpoint
     headers = {"Content-Type": "video/mp4", "X-API-KEY": X_API_KEY}
     request_url = f"{url}?fileName={file_name}"
     print(f"POST to {url}")
@@ -227,6 +229,7 @@ def capture_video(
     response = requests.post(request_url, headers=headers, data=base64_data)
     print(f"Status {response.status_code}: {response.json()}")
 
+    # delete the video file as cleanup
     os.remove(file_name)
     return
 
@@ -261,12 +264,12 @@ def overlay_metadata(frame, metadata):
 def main(config):
     print(f"\nInitializing OPS241 Module at {datetime.now()}")
     # OPS 241 API Doc: https://omnipresense.com/wp-content/uploads/2021/09/AN-010-X_API_Interface.pdf
-    ser = serial.Serial(
+    ser = Serial(
         port="/dev/ttyACM0",
         baudrate=19_200,
-        parity=serial.PARITY_NONE,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS,
+        parity=PARITY_NONE,
+        stopbits=STOPBITS_ONE,
+        bytesize=EIGHTBITS,
         timeout=0.50,
     )
     # send_serial_cmd(ser, "Set Speed Output Units: ", config.ops_units_pref)
@@ -328,13 +331,14 @@ def main(config):
 
 
 if __name__ == "__main__":
-    config = Config(
-        OPS_DIRECTION_PREF,
-        EMOTE_THRESHOLD,
-        SLOW_DOWN_THRESHOLD,
-        BLINK_THRESHOLD,
-        MIN_DISPLAYABLE_SPEED,
-        MIN_LOG_SPEED,
-        MIN_VIDEO_SPEED,
+    main(
+        Config(
+            OPS_DIRECTION_PREF,
+            EMOTE_THRESHOLD,
+            SLOW_DOWN_THRESHOLD,
+            BLINK_THRESHOLD,
+            MIN_DISPLAYABLE_SPEED,
+            MIN_LOG_SPEED,
+            MIN_VIDEO_SPEED,
+        )
     )
-    main(config)
