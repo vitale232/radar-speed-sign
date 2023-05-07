@@ -1,28 +1,19 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
-/**
- *
- * Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
- * @param {Object} event - API Gateway Lambda Proxy Input Format
- *
- * Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
- * @returns {Object} object - API Gateway Lambda Proxy Output Format
- *
- */
-
 const client = new S3Client({});
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log(`Starting at: ${new Date()}`);
     try {
-        console.log({ event });
         const contentType = event.headers?.['Content-Type'] ?? 'vido/mp4';
-        console.log({ contentType });
-        const videoBase64 = event.body as string;
-        if (!videoBase64) {
+        const videoBase64 = event.body;
+        console.log({ path: event.path, contentType, videoBase64_IsTruthy: videoBase64 != null });
+        if (!videoBase64 || typeof videoBase64 !== 'string') {
             return {
                 statusCode: 400,
-                body: JSON.stringify({ message: 'No video data provided' }),
+                body: JSON.stringify({
+                    message: 'The request body is not valid base64 encoded `Content-Type: video/mp4`.',
+                }),
             };
         }
         const fileName =
@@ -36,7 +27,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             ContentType: contentType,
             Metadata: { contentType },
         });
-        console.log({ command });
         await client.send(command);
         return {
             statusCode: 200,
@@ -49,7 +39,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         return {
             statusCode: 500,
             body: JSON.stringify({
-                message: `Error: ${err}`,
+                message: `InternalError: ${err}`,
             }),
         };
     }
