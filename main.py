@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import base64
 from datetime import datetime
 import inspect
 from multiprocessing import Process, Value
@@ -8,17 +9,22 @@ import sys
 import time
 
 import cv2
+from dotenv import load_dotenv
+import requests
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from rgbmatrix import graphics
 import serial
 
+load_dotenv()
+X_API_KEY = os.environ["X_API_KEY"]
+API_URL = os.environ["API_URL"]
 
 OPS_DIRECTION_PREF = "R+"  # Means data in only
 # exclusive thresholds, using greater than logic
 EMOTE_THRESHOLD = 36
 SLOW_DOWN_THRESHOLD = 30
 BLINK_THRESHOLD = 28
-MIN_DISPLAYABLE_SPEED = 1
+MIN_DISPLAYABLE_SPEED = 14
 MIN_LOG_SPEED = 14
 MIN_VIDEO_SPEED = 14
 
@@ -171,19 +177,22 @@ def capture_video(
     current_datetime,
     duration=10,
     datetime_format="%Y-%m-%d_%H:%M:%S",
+    url=API_URL,
 ):
+    is_recording.value = True
+    print(f"capturing video {current_datetime}")
     # Initialize video capture
     cap = cv2.VideoCapture(0)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
 
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*"XVID")
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     formatted_datetime = current_datetime.strftime(datetime_format)
-    out = cv2.VideoWriter(f"vid_{formatted_datetime}.avi", fourcc, fps, (width, height))
+    out = cv2.VideoWriter(f"vid_{formatted_datetime}.mp4", fourcc, fps, (width, height))
 
     start_time = time.time()
+    file_name = f"vid_{formatted_datetime}.mp4"
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -192,8 +201,6 @@ def capture_video(
             frame_with_metadata = overlay_metadata(
                 frame, f"{speed.value} mph | {datetime.now().strftime(datetime_format)}"
             )
-
-            # Display the resulting frame
 
             # Save the frame to disk
             out.write(frame_with_metadata)
@@ -210,6 +217,17 @@ def capture_video(
     cap.release()
     out.release()
     is_recording.value = False
+
+    headers = {"Content-Type": "video/mp4", "X-API-KEY": X_API_KEY}
+    request_url = f"{url}?fileName={file_name}"
+    print(f"POST to {url}")
+
+    with open(file_name, "rb") as file:
+        base64_data = base64.b64encode(file.read()).decode("utf-8")
+    response = requests.post(request_url, headers=headers, data=base64_data)
+    print(f"Status {response.status_code}: {response.json()}")
+
+    os.remove(file_name)
     return
 
 
@@ -285,15 +303,15 @@ def main(config):
                 velocity_mph = round(velocity * 2.23694)
                 shared_velocity.value = velocity_mph
                 observed_at = datetime.now()
-                if velocity > config.min_log_speed:
+                print(f"{velocity_mph=}, {velocity=}")
+                if velocity_mph > config.min_log_speed:
                     datum = f"{observed_at}, {velocity_mph}\n"
                     print(f"{datum=}")
                     output_file.write(datum)
                     output_file.flush()
-                if velocity > config.min_video_speed:
+                if velocity_mph > config.min_video_speed:
                     print(f"value: {is_saving_video.value}")
                     if is_saving_video.value == 0:
-                        is_saving_video.value = 1
                         video_process = Process(
                             target=capture_video,
                             args=(is_saving_video, shared_velocity, observed_at),
