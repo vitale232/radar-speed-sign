@@ -11,25 +11,24 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
  *
  */
 
+const client = new S3Client({});
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log(`Starting at: ${new Date()}`);
     try {
         console.log({ event });
         const contentType = event.headers?.['Content-Type'];
         console.log({ contentType });
-        const fileName =
-            event.queryStringParameters?.['fileName'] ??
-            event.queryStringParameters?.['filename'] ??
-            `vid_uploaded_${new Date().getTime()}.mp4`;
         const videoBase64 = event.body as string;
-
         if (!videoBase64) {
             return {
                 statusCode: 400,
                 body: JSON.stringify({ message: 'No video data provided' }),
             };
         }
-        const client = new S3Client({});
+        const fileName =
+            event.queryStringParameters?.['fileName'] ??
+            event.queryStringParameters?.['filename'] ??
+            `vid_uploaded_${new Date().getTime()}.mp4`;
         const command = new PutObjectCommand({
             Bucket: 'radar-speed-sign',
             Key: fileName,
