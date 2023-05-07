@@ -1,3 +1,5 @@
+.env
+
 # Output data
 speeds.csv
 log
