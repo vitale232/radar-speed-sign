@@ -24,9 +24,9 @@ OPS_DIRECTION_PREF = "R+"  # Means data in only
 EMOTE_THRESHOLD = 36
 SLOW_DOWN_THRESHOLD = 30
 BLINK_THRESHOLD = 28
-MIN_DISPLAYABLE_SPEED = 14
-MIN_LOG_SPEED = 14
-MIN_VIDEO_SPEED = 14
+MIN_DISPLAYABLE_SPEED = 1
+MIN_LOG_SPEED = 1
+MIN_VIDEO_SPEED = 1
 
 
 class Config:
@@ -187,9 +187,9 @@ def capture_video(
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    avc = cv2.VideoWriter_fourcc(*"avc1")
     formatted_datetime = current_datetime.strftime(datetime_format)
-    out = cv2.VideoWriter(f"vid_{formatted_datetime}.mp4", fourcc, fps, (width, height))
+    out = cv2.VideoWriter(f"vid_{formatted_datetime}.mp4", avc, fps, (width, height))
 
     start_time = time.time()
     file_name = f"vid_{formatted_datetime}.mp4"
@@ -303,7 +303,7 @@ def main(config):
                 velocity_mph = round(velocity * 2.23694)
                 shared_velocity.value = velocity_mph
                 observed_at = datetime.now()
-                print(f"{velocity_mph=}, {velocity=}")
+                # print(f"{velocity_mph=}, {velocity=}")
                 if velocity_mph > config.min_log_speed:
                     datum = f"{observed_at}, {velocity_mph}\n"
                     print(f"{datum=}")
