@@ -28,6 +28,7 @@ BLINK_THRESHOLD = 28
 MIN_DISPLAYABLE_SPEED = 14
 MIN_LOG_SPEED = 14
 MIN_VIDEO_SPEED = 14
+MAX_DISPLAYABLE_SPEED = 40
 
 
 class Config:
@@ -38,6 +39,7 @@ class Config:
         slow_down_threshold,
         blink_threshold,
         min_displayable_speed,
+        max_displayable_speed,
         min_log_speed,
         min_video_speed,
     ) -> None:
@@ -46,6 +48,7 @@ class Config:
         self.slow_down_threshold = slow_down_threshold
         self.blink_threshold = blink_threshold
         self.min_displayable_speed = min_displayable_speed
+        self.max_displayable_speed = max_displayable_speed
         self.min_log_speed = min_log_speed
         self.min_video_speed = min_video_speed
 
@@ -90,7 +93,16 @@ def paint_matrix(config, speed_value):
         matrix.Clear()
 
         speed = speed_value.value
-        if speed > config.emote_threshold:
+        if speed > config.max_displayable_speed:
+            # Above some speed, we're more likely to inflame ppl than change
+            # behavior. If you're going > 40mph at this deployment,
+            # you're a lost cause.
+            print(
+                f"{speed=}, which is greater than "
+                + f"max_displayable_speed={config.max_displayable_speed}"
+            )
+            pass
+        elif speed > config.emote_threshold:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED, 0.5)
             matrix.Clear()
@@ -110,9 +122,10 @@ def paint_matrix(config, speed_value):
         elif speed > config.min_displayable_speed:
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED)
+
         else:
-            if speed > 5:
-                print(f"No display {speed = }")
+            # if speed > 5:
+            #     print(f"No display {speed = }")
             # else:
             #     print(f"{speed=}")
             #     show_speed(speed, matrix, canvas, digits_font, RED)
@@ -356,6 +369,7 @@ if __name__ == "__main__":
             SLOW_DOWN_THRESHOLD,
             BLINK_THRESHOLD,
             MIN_DISPLAYABLE_SPEED,
+            MAX_DISPLAYABLE_SPEED,
             MIN_LOG_SPEED,
             MIN_VIDEO_SPEED,
         )
