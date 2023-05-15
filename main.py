@@ -106,7 +106,7 @@ def paint_matrix(config, speed_value):
             print(f"{speed=}")
             show_speed(speed, matrix, canvas, digits_font, RED, 0.5)
             matrix.Clear()
-            emote("HOLY", "SHIT!", matrix, canvas, animation_font, RED, 1)
+            emote("MY", "WORD", matrix, canvas, animation_font, RED, 1)
             matrix.Clear()
             emote("SLOW", "DOWN", matrix, canvas, animation_font, RED, 1)
         elif speed > config.slow_down_threshold:
