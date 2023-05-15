@@ -213,7 +213,10 @@ def capture_video(
     cap = cv2.VideoCapture(0)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    # We're dividing the natural frame rate by 1.5, as it appears
+    # the pi's main loop is not keeping up with the natural rate,
+    # which leads to the output video looking as if it's in "fast-forward"
+    fps = int(cap.get(cv2.CAP_PROP_FPS) / 1.5)
 
     avc = cv2.VideoWriter_fourcc(*"avc1")
     formatted_datetime = current_datetime.strftime(datetime_format)
